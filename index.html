@@ -121,11 +121,11 @@
       line-height: 1.5;
     }
 
-    /* === CARD AGENDA PHASE === */
+    /* === CARD SELECTION PHASE (SHUFFLE & FACE DOWN) === */
     .card-phase-container {
       position: fixed;
       inset: 0;
-      background: rgba(5, 2, 8, 0.92);
+      background: rgba(5, 2, 8, 0.94);
       backdrop-filter: blur(15px);
       display: flex;
       flex-direction: column;
@@ -133,14 +133,13 @@
       justify-content: center;
       z-index: 120;
       padding: 1.5rem;
-      transition: opacity 0.5s ease;
     }
 
     .card-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 1rem;
-      max-width: 600px;
+      max-width: 650px;
       width: 100%;
       margin: 1.5rem 0;
     }
@@ -158,9 +157,7 @@
       cursor: pointer;
       transition: all 0.3s ease;
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      position: relative;
-      overflow: hidden;
-      min-height: 130px;
+      min-height: 120px;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -176,29 +173,21 @@
     .agenda-card.face-down {
       background: linear-gradient(135deg, #180826, #0c0414);
       border-color: var(--accent-gold);
+      color: transparent;
     }
 
-    .agenda-card.face-down .card-title, 
-    .agenda-card.face-down .card-desc { display: none; }
-
+    .agenda-card.face-down .card-text { display: none; }
     .agenda-card.face-down::after {
       content: '🎴';
-      font-size: 2rem;
+      font-size: 2.2rem;
     }
 
-    .card-title {
-      font-size: 0.85rem;
-      color: var(--accent-gold);
-      text-transform: uppercase;
-      font-weight: 800;
-      letter-spacing: 1px;
-      margin-bottom: 0.4rem;
-    }
-
-    .card-desc {
+    .card-text {
       font-size: 0.95rem;
-      color: #fff;
-      font-weight: 600;
+      color: var(--accent-gold);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     /* Heads Up Display (HUD) Controls */
@@ -429,20 +418,19 @@
   <!-- Start Screen Modal -->
   <div class="start-screen" id="startScreen">
     <h2>The Vault</h2>
-    <p>Preview the agenda cards, shuffle the deck, and begin your intimate session.</p>
+    <p>Shuffle the 6 Category Cards, let her pick one blind, and dive into the dice game.</p>
     <button class="btn" id="initGameBtn">Enter The Vault 🔥</button>
   </div>
 
-  <!-- Card Agenda Phase Modal -->
+  <!-- Card Selection Phase (Shuffle & Face-Down) -->
   <div class="card-phase-container" id="cardPhaseContainer" style="display: none;">
-    <h2 style="font-family: var(--font-serif); font-style: italic; color: var(--accent-gold); font-size: 2.2rem; margin-bottom: 0.3rem;">Tonight's Agenda</h2>
-    <p style="color: #9a849f; font-size: 0.95rem; max-width: 400px; text-align: center; margin-bottom: 1rem;">Shuffle the cards to scramble the order, then pick a card to begin unsealing!</p>
+    <h2 style="font-family: var(--font-serif); font-style: italic; color: var(--accent-gold); font-size: 2.2rem; margin-bottom: 0.3rem;">Category Deck</h2>
+    <p style="color: #9a849f; font-size: 0.95rem; max-width: 420px; text-align: center; margin-bottom: 1rem;" id="cardSubText">Review the 6 options, then shuffle them face down so nobody knows where anything is!</p>
     
-    <div class="card-grid" id="agendaCardGrid"></div>
+    <div class="card-grid" id="categoryCardGrid"></div>
 
     <div style="display: flex; gap: 1rem; margin-top: 1rem;">
       <button class="btn" id="shuffleCardsBtn">Shuffle Cards 🔀</button>
-      <button class="btn btn-rose" id="startVaultFromCardBtn" style="display: none;" disabled>Pick Card to Proceed ➔</button>
     </div>
   </div>
 
@@ -454,11 +442,11 @@
   <!-- Control HUD Panel -->
   <div class="hud-layer">
     <div class="control-panel" id="controlPanel">
-      <div class="instruction-text" id="instructionText">Card Selected. Roll for Box 1</div>
+      <div class="instruction-text" id="instructionText">Box 1 Auto-Filled! Roll for Box 2</div>
       
       <!-- Action 1: Roll Dice -->
       <div id="rollActionArea">
-        <button class="btn" id="rollDiceBtn">Roll Modern Die 🎲</button>
+        <button class="btn" id="rollDiceBtn">Roll Dynamic Die 🎲</button>
       </div>
 
       <!-- Action 2: Choose Mystery Box (Click 3D boxes or buttons) -->
@@ -591,13 +579,21 @@
       ]
     };
 
-    // Helper to get max options for current roll based on stage index
-    function getMaxSidesForStage(stageIndex) {
-      if (stageIndex === 0) return poolData.categories.length; // 6
-      if (stageIndex === 1) return poolData.sub_her_body.length; // 10 (will adapt dynamically)
-      if (stageIndex === 2) return poolData.act_standard.length; // 6
-      if (stageIndex === 3) return poolData.methods.length; // 6
-      if (stageIndex === 4) return poolData.climax.length; // 8
+    // Determine max sides dynamically based on target pool size for the current box stage
+    function getMaxSidesForBox(boxIndex) {
+      if (boxIndex === 1) {
+        // Target box pool size depends on Box 1's category choice
+        const cat = boxMeshes[0].userData.assignedCategory;
+        if (cat.includes("Clothing")) return poolData.sub_clothing.length;
+        if (cat.includes("Myself")) return poolData.sub_myself.length;
+        if (cat.includes("Celebrity")) return 1; // Celebrity is auto-locked
+        if (cat.toLowerCase().includes("condom")) return poolData.sub_condom.length;
+        if (cat.includes("Item")) return poolData.sub_item.length;
+        return poolData.sub_her_body.length;
+      }
+      if (boxIndex === 2) return poolData.act_standard.length;
+      if (boxIndex === 3) return poolData.methods.length;
+      if (boxIndex === 4) return poolData.climax.length;
       return 6;
     }
 
@@ -668,11 +664,11 @@
     scene.add(pointLight2);
 
     const boxConfigs = [
-      { name: "Velvet", color: 0xff2a6d },
-      { name: "Gold", color: 0xffd700 },
-      { name: "Emerald", color: 0x10b981 },
-      { name: "Midnight", color: 0x3b82f6 },
-      { name: "Amethyst", color: 0xa855f7 }
+      { name: "Box 1 (Category)", color: 0xff2a6d },
+      { name: "Box 2 (Target)", color: 0xffd700 },
+      { name: "Box 3 (Action)", color: 0x10b981 },
+      { name: "Box 4 (Method)", color: 0x3b82f6 },
+      { name: "Box 5 (Climax)", color: 0xa855f7 }
     ];
 
     const boxMeshes = [];
@@ -698,7 +694,7 @@
         emissiveIntensity: 0.25
       });
       const mesh = new THREE.Mesh(geometry, material);
-      mesh.userData = { id: idx, name: cfg.name, assignedValue: null, originalColor: cfg.color, opened: false };
+      mesh.userData = { id: idx, name: cfg.name, assignedValue: null, assignedCategory: null, originalColor: cfg.color, opened: false };
       scene.add(mesh);
       boxMeshes.push(mesh);
     });
@@ -718,18 +714,15 @@
     const diceGroup = new THREE.Group();
     diceGroup.position.set(0, 2.2, 2);
 
-    // Canvas Texture Generator with Rounded Corners & Thick Gold
     function createModernRoundedDieFaceTexture(numberText) {
       const canvas = document.createElement('canvas');
       canvas.width = 512; 
       canvas.height = 512;
       const ctx = canvas.getContext('2d');
 
-      // Pure Black Background
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, 512, 512);
 
-      // Rounded Rectangle Path for Modern Die Face
       const radius = 64;
       ctx.beginPath();
       ctx.moveTo(24 + radius, 24);
@@ -743,16 +736,14 @@
       ctx.quadraticCurveTo(24, 24, 24 + radius, 24);
       ctx.closePath();
 
-      // Thick Gold Outline & Fill
       ctx.lineWidth = 32;
       ctx.strokeStyle = '#ffd700';
       ctx.stroke();
 
-      // Glowing Gold Number
       ctx.shadowColor = '#ffd700';
       ctx.shadowBlur = 40;
       ctx.fillStyle = '#ffdf00';
-      ctx.font = '900 260px Outfit, sans-serif';
+      ctx.font = '900 240px Outfit, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(numberText.toString(), 256, 260);
@@ -763,7 +754,7 @@
     }
 
     let dieMaterials = [];
-    for (let i = 1; i <= 12; i++) { // Support up to 12-sided values dynamically
+    for (let i = 1; i <= 25; i++) { // Supports up to 25 sides dynamically
       dieMaterials.push(new THREE.MeshStandardMaterial({
         map: createModernRoundedDieFaceTexture(i),
         roughness: 0.1,
@@ -811,18 +802,11 @@
     }
 
     /* ==================================================================
-       SECTION 3E: GAME STATE, CARD AGENDA & CONTROLLER LOGIC
+       SECTION 3E: GAME STATE & CONTROLLER LOGIC
     =================================================================== */
-    let agendaCardsData = [
-      { id: 0, title: "Stage 1", desc: "Category Selection" },
-      { id: 1, title: "Stage 2", desc: "Target Selection" },
-      { id: 2, title: "Stage 3", desc: "Action Task" },
-      { id: 3, title: "Stage 4", desc: "Method Technique" },
-      { id: 4, title: "Stage 5", desc: "Over The Edge Climax" }
-    ];
-
+    let categoryList = [...poolData.categories];
     let currentRollValue = null;
-    let placedCount = 0;
+    let placedCount = 1; // Box 1 is auto-filled by card selection!
     let openedCount = 0;
     let masterBlueprint = [];
     let boxOutcomes = {};
@@ -830,7 +814,6 @@
     let finalCelebPick = null;
     let isPlacingMode = false;
     let isUnboxingMode = false;
-    let selectedCardIndex = null;
 
     const instructionText = document.getElementById('instructionText');
     const rollActionArea = document.getElementById('rollActionArea');
@@ -845,66 +828,48 @@
     document.getElementById('initGameBtn').addEventListener('click', () => {
       document.getElementById('startScreen').style.display = 'none';
       document.getElementById('cardPhaseContainer').style.display = 'flex';
-      renderAgendaCards(false);
+      renderCategoryCards(false);
     });
 
-    function renderAgendaCards(isFaceDown) {
-      const grid = document.getElementById('agendaCardGrid');
+    function renderCategoryCards(isFaceDown) {
+      const grid = document.getElementById('categoryCardGrid');
       grid.innerHTML = '';
-      agendaCardsData.forEach((card, idx) => {
+      categoryList.forEach((catName, idx) => {
         const cardEl = document.createElement('div');
         cardEl.className = `agenda-card ${isFaceDown ? 'face-down' : ''}`;
-        cardEl.innerHTML = `
-          <div class="card-title">${card.title}</div>
-          <div class="card-desc">${card.desc}</div>
-        `;
+        cardEl.innerHTML = `<div class="card-text">${catName}</div>`;
         if (!isFaceDown) {
-          cardEl.onclick = () => selectAgendaCard(idx, cardEl);
+          cardEl.onclick = () => pickCategoryCard(catName, cardEl);
         }
         grid.appendChild(cardEl);
       });
     }
 
-    // Shuffle Cards Button
+    // Shuffle & Face-Down
     document.getElementById('shuffleCardsBtn').addEventListener('click', () => {
       sfx.playRoll();
-      // Scramble order
-      agendaCardsData.sort(() => Math.random() - 0.5);
-      renderAgendaCards(true);
-      document.getElementById('startVaultFromCardBtn').style.display = 'block';
-      document.getElementById('startVaultFromCardBtn').disabled = true;
-      document.getElementById('startVaultFromCardBtn').innerText = "Pick a Card to Begin ➔";
-
-      // Reveal face-down after short delay for animation feel
-      setTimeout(() => {
-        renderAgendaCards(false);
-        instructionText.innerText = "Agenda shuffled! Tap any card to lock your sequence:";
-      }, 500);
+      categoryList.sort(() => Math.random() - 0.5);
+      renderCategoryCards(true);
+      document.getElementById('cardSubText').innerText = "Cards shuffled face down! Tap any card to pick your starting category:";
     });
 
-    function selectAgendaCard(idx, element) {
-      document.querySelectorAll('.agenda-card').forEach(c => c.style.borderColor = 'var(--panel-border)');
-      element.style.borderColor = 'var(--accent-gold)';
-      selectedCardIndex = idx;
-      
-      const proceedBtn = document.getElementById('startVaultFromCardBtn');
-      proceedBtn.style.display = 'block';
-      proceedBtn.disabled = false;
-      proceedBtn.innerText = `Proceed with ${agendaCardsData[idx].title} First 🔓`;
-    }
+    function pickCategoryCard(catName, cardElement) {
+      sfx.playExplode();
+      // Auto-assign to Box 1
+      boxMeshes[0].userData.assignedCategory = catName;
+      boxMeshes[0].userData.assignedValue = categoryList.indexOf(catName) + 1;
+      boxMeshes[0].material.emissiveIntensity = 0.8;
 
-    document.getElementById('startVaultFromCardBtn').addEventListener('click', () => {
       document.getElementById('cardPhaseContainer').style.display = 'none';
-      instructionText.innerText = `Card ${agendaCardsData[selectedCardIndex].title} selected! Roll for Box 1:`;
-    });
+      instructionText.innerText = `Box 1 Auto-Filled with "${catName}"! Roll for Box 2 (Target):`;
+    }
 
     // Roll Dice Logic with Dynamic Max Sides
     document.getElementById('rollDiceBtn').addEventListener('click', () => {
       document.getElementById('rollDiceBtn').disabled = true;
       instructionText.innerText = "Rolling Die...";
 
-      // Determine max sides based on current box placement stage
-      const maxSides = getMaxSidesForStage(placedCount);
+      const maxSides = getMaxSidesForBox(placedCount);
 
       let counter = 0;
       const rollInterval = setInterval(() => {
@@ -922,11 +887,10 @@
           clearInterval(rollInterval);
           diceGroup.position.y = 2.2;
           
-          // Map roll to face (fallback rotation if >6)
           const targetRot = faceRotations[currentRollValue] || { x: 0, y: 0 };
           dieMesh.rotation.set(targetRot.x, targetRot.y, 0);
 
-          instructionText.innerText = `Rolled ${currentRollValue} (Max ${maxSides})! Tap a box to assign:`;
+          instructionText.innerText = `Rolled ${currentRollValue} (Max ${maxSides})! Tap Box ${placedCount + 1} to assign:`;
           rollActionArea.style.display = 'none';
           placeActionArea.style.display = 'block';
           isPlacingMode = true;
@@ -939,11 +903,14 @@
     function renderBoxChoiceButtons() {
       boxChoiceGrid.innerHTML = '';
       boxMeshes.forEach((mesh, idx) => {
+        // Skip Box 1 since it's already auto-filled
+        if (idx === 0) return;
+
         const btn = document.createElement('button');
         btn.className = 'box-choice-btn';
         const isFilled = mesh.userData.assignedValue !== null;
         btn.disabled = isFilled;
-        btn.innerHTML = `<span>${mesh.userData.name}</span><span style="color:var(--accent-gold);">${isFilled ? '✓' : 'Pick'}</span>`;
+        btn.innerHTML = `<span>Box ${idx + 1}</span><span style="color:var(--accent-gold);">${isFilled ? '✓' : 'Pick'}</span>`;
         btn.onclick = () => assignRollToBox(idx);
         boxChoiceGrid.appendChild(btn);
       });
@@ -960,7 +927,8 @@
       isPlacingMode = false;
 
       if (placedCount < 5) {
-        instructionText.innerText = `Roll for Box ${placedCount + 1}`;
+        const stageNames = ["", "Target", "Action", "Method", "Climax"];
+        instructionText.innerText = `Roll for Box ${placedCount + 1} (${stageNames[placedCount]})`;
         rollActionArea.style.display = 'block';
         document.getElementById('rollDiceBtn').disabled = false;
       } else {
@@ -984,7 +952,7 @@
 
       if (intersects.length > 0) {
         const clickedMesh = intersects[0].object;
-        if (isPlacingMode && clickedMesh.userData.assignedValue === null) {
+        if (isPlacingMode && clickedMesh.userData.id !== 0 && clickedMesh.userData.assignedValue === null) {
           assignRollToBox(clickedMesh.userData.id);
         } else if (isUnboxingMode && !clickedMesh.userData.opened) {
           triggerBoxUnbox(clickedMesh.userData.id);
@@ -1003,13 +971,11 @@
     });
 
     function prepareOutcomes() {
-      const catVal = boxMeshes[0].userData.assignedValue;
+      const cat = boxMeshes[0].userData.assignedCategory;
       const targetValDice = boxMeshes[1].userData.assignedValue;
       const actionValDice = boxMeshes[2].userData.assignedValue;
       const methodValDice = boxMeshes[3].userData.assignedValue;
       const climaxValDice = boxMeshes[4].userData.assignedValue;
-
-      const cat = poolData.categories[(catVal - 1) % poolData.categories.length];
       
       let targetPool = poolData.sub_her_body;
       let actPool = poolData.act_standard;
@@ -1066,7 +1032,7 @@
         const btn = document.createElement('button');
         btn.className = 'box-choice-btn';
         btn.disabled = mesh.userData.opened;
-        btn.innerHTML = `<span>${mesh.name}</span><span style="color:var(--accent-gold);">${mesh.userData.opened ? 'Done' : 'Explode'}</span>`;
+        btn.innerHTML = `<span>Box ${idx + 1}</span><span style="color:var(--accent-gold);">${mesh.userData.opened ? 'Done' : 'Explode'}</span>`;
         btn.onclick = () => triggerBoxUnbox(idx);
         unboxChoiceGrid.appendChild(btn);
       });
@@ -1088,7 +1054,7 @@
       const stageData = boxOutcomes[boxIdx];
       const boxObj = boxMeshes[boxIdx];
 
-      document.getElementById('modalTitle').innerText = `${boxObj.name} Box Unsealed (Rolled: ${boxObj.userData.assignedValue})`;
+      document.getElementById('modalTitle').innerText = `Box ${boxIdx + 1} Unsealed (Rolled: ${boxObj.userData.assignedValue})`;
       const containerEl = document.getElementById('modalContentContainer');
       const celebGenBox = document.getElementById('celebGeneratorBox');
 
