@@ -418,7 +418,7 @@
   <!-- Start Screen Modal -->
   <div class="start-screen" id="startScreen">
     <h2>The Vault</h2>
-    <p>Shuffle the 6 Category Cards, let her pick one blind, and dive into the dice game.</p>
+    <p>Shuffle the 6 Category Cards, let her pick one blind, and fill your 5 mystery boxes using the generator.</p>
     <button class="btn" id="initGameBtn">Enter The Vault 🔥</button>
   </div>
 
@@ -442,36 +442,29 @@
   <!-- Control HUD Panel -->
   <div class="hud-layer">
     <div class="control-panel" id="controlPanel">
-      <div class="instruction-text" id="instructionText">Box 1 Auto-Filled! Roll for Box 2</div>
+      <div class="instruction-text" id="instructionText">Box 1 Auto-Filled! Tap Box 2, 3, 4, or 5 to generate numbers:</div>
       
-      <!-- Action 1: Roll Dice -->
-      <div id="rollActionArea">
-        <button class="btn" id="rollDiceBtn">Roll Dynamic Die 🎲</button>
-      </div>
-
-      <!-- Action 2: Choose Mystery Box (Click 3D boxes or buttons) -->
-      <div id="placeActionArea" style="display: none; width: 100%;">
-        <div style="font-size: 0.9rem; color: #9a849f; margin-bottom: 0.3rem;">
-          Rolled: <span id="currentRollVal" style="color:var(--accent-gold); font-size:1.4rem; font-weight:800;">?</span>
-        </div>
-        <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 0.4rem; color:#fff;">
-          👆 Tap a coloured 3D box on screen or below:
-        </div>
-        <div class="box-choice-grid" id="boxChoiceGrid"></div>
-      </div>
-
-      <!-- Action 3: Unseal Vault -->
+      <!-- Action: Unseal Vault -->
       <div id="unsealActionArea" style="display: none;">
         <button class="btn" id="unsealVaultBtn">UNSEAL THE VAULT 🔓</button>
       </div>
 
-      <!-- Action 4: Unbox Explode Order -->
+      <!-- Action: Unbox Explode Order -->
       <div id="interactiveUnboxArea" style="display: none; width: 100%;">
         <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; color:var(--accent-gold);">
           👆 Tap a box to explode next:
         </div>
         <div class="box-choice-grid" id="unboxChoiceGrid"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Fancy Number Generator Spinner Modal -->
+  <div class="overlay" id="spinnerOverlay">
+    <div class="modal-card" style="max-width: 400px;">
+      <div class="modal-title" id="spinnerTitle">Generating Number...</div>
+      <div class="modal-main-text" id="spinnerNumber" style="font-size: 4rem; color: var(--accent-gold);">?</div>
+      <div style="font-size: 0.85rem; color: #9a849f;" id="spinnerSubtext">Fitting valid options...</div>
     </div>
   </div>
 
@@ -602,19 +595,19 @@
       constructor() {
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       }
-      playRoll() {
+      playTick() {
         if (this.ctx.state === 'suspended') this.ctx.resume();
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(260, this.ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.05);
-        gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+        osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.04);
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start();
-        osc.stop(this.ctx.currentTime + 0.05);
+        osc.stop(this.ctx.currentTime + 0.04);
       }
       playExplode() {
         if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -706,76 +699,6 @@
       updateResponsiveLayout();
     });
 
-    /* ==================================================================
-       SECTION 3D: MODERN ROUNDED PITCH-BLACK & GOLD DIE
-    =================================================================== */
-    const diceGroup = new THREE.Group();
-    diceGroup.position.set(0, 2.2, 2);
-
-    function createModernRoundedDieFaceTexture(numberText) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 512; 
-      canvas.height = 512;
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, 512, 512);
-
-      const radius = 64;
-      ctx.beginPath();
-      ctx.moveTo(24 + radius, 24);
-      ctx.lineTo(512 - 24 - radius, 24);
-      ctx.quadraticCurveTo(512 - 24, 24, 512 - 24, 24 + radius);
-      ctx.lineTo(512 - 24, 512 - 24 - radius);
-      ctx.quadraticCurveTo(512 - 24, 512 - 24, 512 - 24 - radius, 512 - 24);
-      ctx.lineTo(24 + radius, 512 - 24);
-      ctx.quadraticCurveTo(24, 512 - 24, 24, 512 - 24 - radius);
-      ctx.lineTo(24, 24 + radius);
-      ctx.quadraticCurveTo(24, 24, 24 + radius, 24);
-      ctx.closePath();
-
-      ctx.lineWidth = 32;
-      ctx.strokeStyle = '#ffd700';
-      ctx.stroke();
-
-      ctx.shadowColor = '#ffd700';
-      ctx.shadowBlur = 40;
-      ctx.fillStyle = '#ffdf00';
-      ctx.font = '900 240px Outfit, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(numberText.toString(), 256, 260);
-
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.needsUpdate = true;
-      return texture;
-    }
-
-    let dieMaterials = [];
-    for (let i = 1; i <= 25; i++) {
-      dieMaterials.push(new THREE.MeshStandardMaterial({
-        map: createModernRoundedDieFaceTexture(i),
-        roughness: 0.1,
-        metalness: 0.95,
-        emissive: 0xffd700,
-        emissiveIntensity: 0.4
-      }));
-    }
-
-    const dieGeo = new THREE.BoxGeometry(1.4, 1.4, 1.4, 4, 4, 4);
-    const dieMesh = new THREE.Mesh(dieGeo, dieMaterials);
-    diceGroup.add(dieMesh);
-    scene.add(diceGroup);
-
-    const faceRotations = {
-      1: { x: 0, y: 0 },
-      2: { x: 0, y: Math.PI / 2 },
-      3: { x: 0, y: Math.PI },
-      4: { x: 0, y: -Math.PI / 2 },
-      5: { x: -Math.PI / 2, y: 0 },
-      6: { x: Math.PI / 2, y: 0 }
-    };
-
     let shards = [];
     function explodeBoxMesh(mesh) {
       mesh.visible = false;
@@ -803,23 +726,18 @@
        SECTION 3E: GAME STATE & CONTROLLER LOGIC
     =================================================================== */
     let categoryList = [...poolData.categories];
-    let currentRollValue = null;
-    let placedCount = 1; // Box 1 is auto-filled by card selection!
+    let assignedCount = 1; // Box 1 auto-filled by card
     let openedCount = 0;
     let masterBlueprint = [];
     let boxOutcomes = {};
     let isCelebSession = false;
     let finalCelebPick = null;
-    let isPlacingMode = false;
+    let isAssigningMode = true;
     let isUnboxingMode = false;
 
     const instructionText = document.getElementById('instructionText');
-    const rollActionArea = document.getElementById('rollActionArea');
-    const placeActionArea = document.getElementById('placeActionArea');
     const unsealActionArea = document.getElementById('unsealActionArea');
     const interactiveUnboxArea = document.getElementById('interactiveUnboxArea');
-    const currentRollValEl = document.getElementById('currentRollVal');
-    const boxChoiceGrid = document.getElementById('boxChoiceGrid');
     const unboxChoiceGrid = document.getElementById('unboxChoiceGrid');
 
     document.getElementById('initGameBtn').addEventListener('click', () => {
@@ -831,19 +749,17 @@
     function renderCategoryCards(isFaceDown) {
       const grid = document.getElementById('categoryCardGrid');
       grid.innerHTML = '';
-      categoryList.forEach((catName, idx) => {
+      categoryList.forEach((catName) => {
         const cardEl = document.createElement('div');
         cardEl.className = `agenda-card ${isFaceDown ? 'face-down' : ''}`;
         cardEl.innerHTML = `<div class="card-text">${catName}</div>`;
-        
-        // Ensure every card click properly registers and advances the flow
         cardEl.onclick = () => pickCategoryCard(catName);
         grid.appendChild(cardEl);
       });
     }
 
     document.getElementById('shuffleCardsBtn').addEventListener('click', () => {
-      sfx.playRoll();
+      sfx.playTick();
       categoryList.sort(() => Math.random() - 0.5);
       renderCategoryCards(true);
       document.getElementById('cardSubText').innerText = "Cards shuffled face down! Tap any card to pick your starting category:";
@@ -852,85 +768,58 @@
     function pickCategoryCard(catName) {
       sfx.playExplode();
       
-      // Auto-assign Box 1
       boxMeshes[0].userData.assignedCategory = catName;
       boxMeshes[0].userData.assignedValue = poolData.categories.indexOf(catName) + 1;
       boxMeshes[0].material.emissiveIntensity = 0.8;
 
-      // Hide card selection overlay completely and show HUD for Box 2
       document.getElementById('cardPhaseContainer').style.display = 'none';
-      instructionText.innerText = `Box 1 Auto-Filled with "${catName}"! Roll for Box 2 (Target):`;
+      instructionText.innerText = `Box 1 Auto-Filled with "${catName}"! Click Boxes 2, 3, 4, or 5 to generate numbers:`;
     }
 
-    document.getElementById('rollDiceBtn').addEventListener('click', () => {
-      document.getElementById('rollDiceBtn').disabled = true;
-      instructionText.innerText = "Rolling Die...";
+    // Fancy Number Generator Animation when clicking a box
+    function triggerNumberGenerator(boxIdx) {
+      if (boxMeshes[boxIdx].userData.assignedValue !== null || !isAssigningMode) return;
 
-      const maxSides = getMaxSidesForBox(placedCount);
+      const maxSides = getMaxSidesForBox(boxIdx);
+      const overlay = document.getElementById('spinnerOverlay');
+      const spinnerTitle = document.getElementById('spinnerTitle');
+      const spinnerNumber = document.getElementById('spinnerNumber');
+      const spinnerSubtext = document.getElementById('spinnerSubtext');
+
+      spinnerTitle.innerText = `Generating Box ${boxIdx + 1} Number`;
+      spinnerSubtext.innerText = `Valid range: 1 to ${maxSides}`;
+      overlay.classList.add('show');
 
       let counter = 0;
-      const rollInterval = setInterval(() => {
-        sfx.playRoll();
-        currentRollValue = Math.floor(Math.random() * maxSides) + 1;
-        currentRollValEl.innerText = currentRollValue;
-
-        dieMesh.rotation.x += 0.8;
-        dieMesh.rotation.y += 1.0;
-        diceGroup.position.y = 2.2 + Math.sin(counter) * 0.4;
-
+      const maxTicks = 20;
+      const tickInterval = setInterval(() => {
+        sfx.playTick();
+        const tempVal = Math.floor(Math.random() * maxSides) + 1;
+        spinnerNumber.innerText = tempVal;
         counter++;
 
-        if (counter > 15) {
-          clearInterval(rollInterval);
-          diceGroup.position.y = 2.2;
-          
-          const targetRot = faceRotations[currentRollValue] || { x: 0, y: 0 };
-          dieMesh.rotation.set(targetRot.x, targetRot.y, 0);
+        if (counter > maxTicks) {
+          clearInterval(tickInterval);
+          const finalVal = Math.floor(Math.random() * maxSides) + 1;
+          spinnerNumber.innerText = finalVal;
+          sfx.playExplode();
 
-          instructionText.innerText = `Rolled ${currentRollValue} (Max ${maxSides})! Tap Box ${placedCount + 1} to assign:`;
-          rollActionArea.style.display = 'none';
-          placeActionArea.style.display = 'block';
-          isPlacingMode = true;
-          isUnboxingMode = false;
-          renderBoxChoiceButtons();
+          boxMeshes[boxIdx].userData.assignedValue = finalVal;
+          boxMeshes[boxIdx].material.emissiveIntensity = 0.8;
+          assignedCount++;
+
+          setTimeout(() => {
+            overlay.classList.remove('show');
+            if (assignedCount < 5) {
+              instructionText.innerText = `${assignedCount} / 5 Boxes Loaded. Click another box:`;
+            } else {
+              isAssigningMode = false;
+              instructionText.innerText = "All Boxes Loaded! Ready to Unseal.";
+              unsealActionArea.style.display = 'block';
+            }
+          }, 700);
         }
-      }, 55);
-    });
-
-    function renderBoxChoiceButtons() {
-      boxChoiceGrid.innerHTML = '';
-      boxMeshes.forEach((mesh, idx) => {
-        if (idx === 0) return; // Box 1 is already filled by card pick
-
-        const btn = document.createElement('button');
-        btn.className = 'box-choice-btn';
-        const isFilled = mesh.userData.assignedValue !== null;
-        btn.disabled = isFilled;
-        btn.innerHTML = `<span>Box ${idx + 1}</span><span style="color:var(--accent-gold);">${isFilled ? '✓' : 'Pick'}</span>`;
-        btn.onclick = () => assignRollToBox(idx);
-        boxChoiceGrid.appendChild(btn);
-      });
-    }
-
-    function assignRollToBox(boxIdx) {
-      if (boxMeshes[boxIdx].userData.assignedValue !== null) return;
-      
-      boxMeshes[boxIdx].userData.assignedValue = currentRollValue;
-      placedCount++;
-
-      boxMeshes[boxIdx].material.emissiveIntensity = 0.8;
-      placeActionArea.style.display = 'none';
-      isPlacingMode = false;
-
-      if (placedCount < 5) {
-        const stageNames = ["", "Target", "Action", "Method", "Climax"];
-        instructionText.innerText = `Roll for Box ${placedCount + 1} (${stageNames[placedCount]})`;
-        rollActionArea.style.display = 'block';
-        document.getElementById('rollDiceBtn').disabled = false;
-      } else {
-        instructionText.innerText = "All Boxes Loaded! Ready to Unseal.";
-        unsealActionArea.style.display = 'block';
-      }
+      }, 50);
     }
 
     const raycaster = new THREE.Raycaster();
@@ -948,8 +837,8 @@
 
       if (intersects.length > 0) {
         const clickedMesh = intersects[0].object;
-        if (isPlacingMode && clickedMesh.userData.id !== 0 && clickedMesh.userData.assignedValue === null) {
-          assignRollToBox(clickedMesh.userData.id);
+        if (isAssigningMode && clickedMesh.userData.id !== 0 && clickedMesh.userData.assignedValue === null) {
+          triggerNumberGenerator(clickedMesh.userData.id);
         } else if (isUnboxingMode && !clickedMesh.userData.opened) {
           triggerBoxUnbox(clickedMesh.userData.id);
         }
@@ -961,7 +850,7 @@
       unsealActionArea.style.display = 'none';
       instructionText.innerText = "Tap a box to explode!";
       interactiveUnboxArea.style.display = 'block';
-      isPlacingMode = false;
+      isAssigningMode = false;
       isUnboxingMode = true;
       renderUnboxChoiceButtons();
     });
@@ -1034,11 +923,9 @@
       });
     }
 
-    let activeBoxIndex = null;
     function triggerBoxUnbox(boxIdx) {
       if (boxMeshes[boxIdx].userData.opened) return;
 
-      activeBoxIndex = boxIdx;
       boxMeshes[boxIdx].userData.opened = true;
       openedCount++;
 
@@ -1050,7 +937,7 @@
       const stageData = boxOutcomes[boxIdx];
       const boxObj = boxMeshes[boxIdx];
 
-      document.getElementById('modalTitle').innerText = `Box ${boxIdx + 1} Unsealed (Rolled: ${boxObj.userData.assignedValue})`;
+      document.getElementById('modalTitle').innerText = `Box ${boxIdx + 1} Unsealed (Number: ${boxObj.userData.assignedValue})`;
       const containerEl = document.getElementById('modalContentContainer');
       const celebGenBox = document.getElementById('celebGeneratorBox');
 
@@ -1099,7 +986,7 @@
       const maxTicks = 25;
 
       const ticker = setInterval(() => {
-        sfx.playRoll();
+        sfx.playTick();
         const rand = getRandomCeleb();
         slotCat.innerText = `📂 ${rand.category}`;
         slotName.innerText = rand.name;
@@ -1184,9 +1071,6 @@
           mesh.rotation.y += 0.005;
         }
       });
-
-      diceGroup.position.y = 2.2 + Math.sin(time * 2) * 0.15;
-      diceGroup.rotation.y += 0.008;
 
       shards.forEach((s, idx) => {
         s.position.x += s.userData.vx;
