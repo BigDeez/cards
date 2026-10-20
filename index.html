@@ -483,7 +483,10 @@
           <div class="celeb-folder" id="slotCategory">📂 SELECTING CATEGORY...</div>
           <div class="celeb-name" id="slotName">???</div>
         </div>
-        <button class="btn btn-rose" id="spinCelebBtn" style="width: 100%; margin-top: 1rem;">Spin Celeb Generator 🎰</button>
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button class="btn btn-rose" id="spinCelebBtn" style="flex: 1;">Spin Celeb 🎰</button>
+          <button class="btn" id="reSpinCelebBtn" style="flex: 1; display: none; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff;" title="Pick someone else">🔄 New Celeb</button>
+        </div>
       </div>
 
       <!-- Summary Execution Plan -->
@@ -776,7 +779,6 @@
       instructionText.innerText = `Box 1 Auto-Filled with "${catName}"! Click Boxes 2, 3, 4, or 5 to generate numbers:`;
     }
 
-    // Fancy Number Generator Animation when clicking a box
     function triggerNumberGenerator(boxIdx) {
       if (boxMeshes[boxIdx].userData.assignedValue !== null || !isAssigningMode) return;
 
@@ -968,6 +970,8 @@
 
         if (isCelebSession) {
           celebGenBox.style.display = 'block';
+          document.getElementById('spinCelebBtn').style.display = 'block';
+          document.getElementById('reSpinCelebBtn').style.display = 'none';
         }
         nextBtn.innerText = "Start New Session ↺";
       }
@@ -975,15 +979,27 @@
       document.getElementById('revealOverlay').classList.add('show');
     }
 
+    // Initial Celeb Spin
     document.getElementById('spinCelebBtn').addEventListener('click', () => {
-      const btn = document.getElementById('spinCelebBtn');
-      btn.disabled = true;
-      
+      runCelebSpinAnimation();
+    });
+
+    // Re-Spin Celeb Button (Allows her to generate a new one if she doesn't like it)
+    document.getElementById('reSpinCelebBtn').addEventListener('click', () => {
+      runCelebSpinAnimation();
+    });
+
+    function runCelebSpinAnimation() {
       const slotCat = document.getElementById('slotCategory');
       const slotName = document.getElementById('slotName');
+      const spinBtn = document.getElementById('spinCelebBtn');
+      const reSpinBtn = document.getElementById('reSpinCelebBtn');
+
+      spinBtn.disabled = true;
+      reSpinBtn.disabled = true;
 
       let counter = 0;
-      const maxTicks = 25;
+      const maxTicks = 22;
 
       const ticker = setInterval(() => {
         sfx.playTick();
@@ -994,6 +1010,7 @@
 
         if (counter > maxTicks) {
           clearInterval(ticker);
+          finalCelebPick = getRandomCeleb(); // Lock new final pick
           slotCat.innerText = `📂 ${finalCelebPick.category}`;
           slotName.innerText = finalCelebPick.name;
           
@@ -1006,10 +1023,14 @@
             bpCelebRow.innerText = `${finalCelebPick.category} ➔ ${finalCelebPick.name}`;
           }
 
-          btn.innerText = "Target Selected 🔥";
+          spinBtn.style.display = 'none';
+          reSpinBtn.style.display = 'block';
+          spinBtn.disabled = false;
+          reSpinBtn.disabled = false;
+          reSpinBtn.innerText = "🔄 Pick Another Celeb";
         }
       }, 50);
-    });
+    }
 
     document.getElementById('modalNextBtn').addEventListener('click', () => {
       document.getElementById('revealOverlay').classList.remove('show');
