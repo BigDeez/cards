@@ -579,14 +579,12 @@
       ]
     };
 
-    // Determine max sides dynamically based on target pool size for the current box stage
     function getMaxSidesForBox(boxIndex) {
       if (boxIndex === 1) {
-        // Target box pool size depends on Box 1's category choice
-        const cat = boxMeshes[0].userData.assignedCategory;
+        const cat = boxMeshes[0].userData.assignedCategory || "";
         if (cat.includes("Clothing")) return poolData.sub_clothing.length;
         if (cat.includes("Myself")) return poolData.sub_myself.length;
-        if (cat.includes("Celebrity")) return 1; // Celebrity is auto-locked
+        if (cat.includes("Celebrity")) return 1;
         if (cat.toLowerCase().includes("condom")) return poolData.sub_condom.length;
         if (cat.includes("Item")) return poolData.sub_item.length;
         return poolData.sub_her_body.length;
@@ -754,7 +752,7 @@
     }
 
     let dieMaterials = [];
-    for (let i = 1; i <= 25; i++) { // Supports up to 25 sides dynamically
+    for (let i = 1; i <= 25; i++) {
       dieMaterials.push(new THREE.MeshStandardMaterial({
         map: createModernRoundedDieFaceTexture(i),
         roughness: 0.1,
@@ -824,7 +822,6 @@
     const boxChoiceGrid = document.getElementById('boxChoiceGrid');
     const unboxChoiceGrid = document.getElementById('unboxChoiceGrid');
 
-    // Splash Screen
     document.getElementById('initGameBtn').addEventListener('click', () => {
       document.getElementById('startScreen').style.display = 'none';
       document.getElementById('cardPhaseContainer').style.display = 'flex';
@@ -838,14 +835,13 @@
         const cardEl = document.createElement('div');
         cardEl.className = `agenda-card ${isFaceDown ? 'face-down' : ''}`;
         cardEl.innerHTML = `<div class="card-text">${catName}</div>`;
-        if (!isFaceDown) {
-          cardEl.onclick = () => pickCategoryCard(catName, cardEl);
-        }
+        
+        // Ensure every card click properly registers and advances the flow
+        cardEl.onclick = () => pickCategoryCard(catName);
         grid.appendChild(cardEl);
       });
     }
 
-    // Shuffle & Face-Down
     document.getElementById('shuffleCardsBtn').addEventListener('click', () => {
       sfx.playRoll();
       categoryList.sort(() => Math.random() - 0.5);
@@ -853,18 +849,19 @@
       document.getElementById('cardSubText').innerText = "Cards shuffled face down! Tap any card to pick your starting category:";
     });
 
-    function pickCategoryCard(catName, cardElement) {
+    function pickCategoryCard(catName) {
       sfx.playExplode();
-      // Auto-assign to Box 1
+      
+      // Auto-assign Box 1
       boxMeshes[0].userData.assignedCategory = catName;
-      boxMeshes[0].userData.assignedValue = categoryList.indexOf(catName) + 1;
+      boxMeshes[0].userData.assignedValue = poolData.categories.indexOf(catName) + 1;
       boxMeshes[0].material.emissiveIntensity = 0.8;
 
+      // Hide card selection overlay completely and show HUD for Box 2
       document.getElementById('cardPhaseContainer').style.display = 'none';
       instructionText.innerText = `Box 1 Auto-Filled with "${catName}"! Roll for Box 2 (Target):`;
     }
 
-    // Roll Dice Logic with Dynamic Max Sides
     document.getElementById('rollDiceBtn').addEventListener('click', () => {
       document.getElementById('rollDiceBtn').disabled = true;
       instructionText.innerText = "Rolling Die...";
@@ -903,8 +900,7 @@
     function renderBoxChoiceButtons() {
       boxChoiceGrid.innerHTML = '';
       boxMeshes.forEach((mesh, idx) => {
-        // Skip Box 1 since it's already auto-filled
-        if (idx === 0) return;
+        if (idx === 0) return; // Box 1 is already filled by card pick
 
         const btn = document.createElement('button');
         btn.className = 'box-choice-btn';
